@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/hritikkanojiya/kvtxt/internal/api"
 	"github.com/hritikkanojiya/kvtxt/internal/config"
 	"github.com/hritikkanojiya/kvtxt/internal/crypto"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
@@ -15,7 +16,7 @@ func main() {
 		log.Fatalf("configuration error: %v", err)
 	}
 
-	_, err = crypto.New(cfg.EncryptionKey)
+	crypt, err := crypto.New(cfg.EncryptionKey)
 	if err != nil {
 		log.Fatalf("crypto init error: %v", err)
 	}
@@ -32,6 +33,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
+
+	mux.Handle("/v1/kv", api.CreateKV(store, crypt))
 
 	log.Printf("kvtxt starting on %s\n", cfg.Addr)
 
