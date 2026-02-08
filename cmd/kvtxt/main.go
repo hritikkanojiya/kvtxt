@@ -3,9 +3,16 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/hritikkanojiya/kvtxt/internal/config"
 )
 
 func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("configuration error: %v", err)
+	}
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -13,10 +20,9 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	addr := ":8080"
-	log.Printf("kvtxt starting on %s\n", addr)
+	log.Printf("kvtxt starting on %s\n", cfg.Addr)
 
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(cfg.Addr, mux); err != nil {
 		log.Fatal(err)
 	}
 }
