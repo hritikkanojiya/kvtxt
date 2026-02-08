@@ -9,9 +9,13 @@ import (
 	"github.com/hritikkanojiya/kvtxt/internal/crypto"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
 
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -54,7 +58,31 @@ func main() {
 
 	log.Printf("kvtxt starting on %s\n", cfg.Addr)
 
-	if err := http.ListenAndServe(cfg.Addr, api.Logging(mux)); err != nil {
-		slog.Error("server stopped", "error", err)
+	srv := &http.Server{
+		Addr:    cfg.Addr,
+		Handler: api.Logging(mux),
+	}
+
+	go func() {
+		slog.Info("server listening", "addr", cfg.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	<-stop
+	slog.Info("shutdown signal received")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("graceful shutdown failed", "error", err)
+	} else {
+		slog.Info("server stopped gracefully")
 	}
 }
