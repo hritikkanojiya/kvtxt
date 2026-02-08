@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/hritikkanojiya/kvtxt/internal/config"
+	"github.com/hritikkanojiya/kvtxt/internal/crypto"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
 
 	"log"
@@ -12,6 +13,11 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("configuration error: %v", err)
+	}
+
+	_, err = crypto.New(cfg.EncryptionKey)
+	if err != nil {
+		log.Fatalf("crypto init error: %v", err)
 	}
 
 	store, err := storage.Open(cfg.DBPath)
