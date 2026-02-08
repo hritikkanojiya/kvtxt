@@ -36,6 +36,8 @@ func main() {
 
 	mux.Handle("/v1/kv", api.CreateKV(store, crypt))
 
+	mux.Handle("/v1/kv/", api.GetKV(store, crypt))
+	
 	log.Printf("kvtxt starting on %s\n", cfg.Addr)
 
 	if err := http.ListenAndServe(cfg.Addr, mux); err != nil {
