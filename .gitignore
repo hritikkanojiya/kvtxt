@@ -1,8 +1,13 @@
-# Go
+# Go build
 /bin/
 /dist/
 *.exe
 *.test
+
+# SQLite
+*.db
+*.db-wal
+*.db-shm
 
 # IDE
 .idea/
