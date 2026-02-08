@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hritikkanojiya/kvtxt/internal/cache"
 	"github.com/hritikkanojiya/kvtxt/internal/crypto"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
 )
@@ -19,7 +20,7 @@ type createResponse struct {
 	Key string `json:"key"`
 }
 
-func CreateKV(store *storage.Storage, crypt *crypto.Crypto) http.HandlerFunc {
+func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -70,6 +71,8 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto) http.HandlerFunc {
 			http.Error(w, "storage error", http.StatusInternalServerError)
 			return
 		}
+
+		c.Set(hash, req.Text, entry.ExpiresAtPtr())
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)

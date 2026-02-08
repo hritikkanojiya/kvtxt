@@ -27,3 +27,10 @@ func (s *Storage) Insert(e *Entry) error {
 
 	return err
 }
+
+func (e *Entry) ExpiresAtPtr() *int64 {
+	if e.ExpiresAt.Valid {
+		return &e.ExpiresAt.Int64
+	}
+	return nil
+}
