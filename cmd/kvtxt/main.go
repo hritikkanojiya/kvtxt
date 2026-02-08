@@ -1,10 +1,11 @@
 package main
 
 import (
+	"github.com/hritikkanojiya/kvtxt/internal/config"
+	"github.com/hritikkanojiya/kvtxt/internal/storage"
+
 	"log"
 	"net/http"
-
-	"github.com/hritikkanojiya/kvtxt/internal/config"
 )
 
 func main() {
@@ -12,6 +13,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("configuration error: %v", err)
 	}
+
+	store, err := storage.Open(cfg.DBPath)
+	if err != nil {
+		log.Fatalf("storage init error: %v", err)
+	}
+	defer store.Close()
 
 	mux := http.NewServeMux()
 
