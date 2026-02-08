@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -34,4 +35,11 @@ func Open(path string) (*Storage, error) {
 
 func (s *Storage) Close() error {
 	return s.db.Close()
+}
+
+func IsUniqueConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "UNIQUE constraint failed")
 }

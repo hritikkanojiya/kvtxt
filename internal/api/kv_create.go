@@ -28,6 +28,8 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			return
 		}
 
+		defer r.Body.Close()
+
 		var req createRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid json body", http.StatusBadRequest)
@@ -39,6 +41,11 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			return
 		}
 
+		if req.TTLSeconds != nil && *req.TTLSeconds <= 0 {
+			http.Error(w, "ttl_seconds must be greater than zero", http.StatusBadRequest)
+			return
+		}
+
 		encrypted, err := crypt.Encrypt([]byte(req.Text))
 		if err != nil {
 			slog.Error("encryption failed", "error", err)
@@ -46,43 +53,61 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			return
 		}
 
-		hash, err := storage.GenerateHash()
-		if err != nil {
-			slog.Error("hash generation failed", "error", err)
-			http.Error(w, "hash generation failed", http.StatusInternalServerError)
-			return
-		}
-
 		now := time.Now().Unix()
 
 		var expires sql.NullInt64
-		if req.TTLSeconds != nil && *req.TTLSeconds > 0 {
+		if req.TTLSeconds != nil {
 			expires = sql.NullInt64{
 				Int64: now + *req.TTLSeconds,
 				Valid: true,
 			}
 		}
 
-		entry := &storage.Entry{
-			Hash:      hash,
-			Payload:   encrypted,
-			CreatedAt: now,
-			ExpiresAt: expires,
-		}
+		var entry *storage.Entry
 
-		if err := store.Insert(entry); err != nil {
+		const maxAttempts = 5
+		for i := 0; i < maxAttempts; i++ {
+			hash, err := storage.GenerateHash()
+			if err != nil {
+				slog.Error("hash generation failed", "error", err)
+				http.Error(w, "hash generation failed", http.StatusInternalServerError)
+				return
+			}
+
+			entry = &storage.Entry{
+				Hash:      hash,
+				Payload:   encrypted,
+				CreatedAt: now,
+				ExpiresAt: expires,
+			}
+
+			err = store.Insert(entry)
+			if err == nil {
+				break
+			}
+
+			if storage.IsUniqueConstraintError(err) {
+				continue
+			}
+
 			slog.Error("insert failed", "error", err)
 			http.Error(w, "storage error", http.StatusInternalServerError)
 			return
 		}
 
-		c.Set(hash, req.Text, entry.ExpiresAtPtr())
+		if entry == nil {
+			slog.Error("hash collision retries exhausted")
+			http.Error(w, "could not generate unique key", http.StatusInternalServerError)
+			return
+		}
+
+		c.Set(entry.Hash, req.Text, entry.ExpiresAtPtr())
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
 
+		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(createResponse{
-			Key: hash,
+			Key: entry.Hash,
 		})
 	}
 }
