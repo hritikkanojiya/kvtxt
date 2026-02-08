@@ -23,6 +23,7 @@ func applySchema(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS kv (
 		hash TEXT PRIMARY KEY,
 		payload BLOB NOT NULL,
+		content_type TEXT NOT NULL,
 		created_at INTEGER NOT NULL,
 		expires_at INTEGER
 	);

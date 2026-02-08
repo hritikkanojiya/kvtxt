@@ -1,21 +1,17 @@
 package api
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/hritikkanojiya/kvtxt/internal/cache"
 	"github.com/hritikkanojiya/kvtxt/internal/crypto"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
 )
 
-type getResponse struct {
-	Text string `json:"text"`
-}
-
-func GetKV(store *storage.Storage, crypt *crypto.Crypto) http.HandlerFunc {
+func GetKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -31,6 +27,13 @@ func GetKV(store *storage.Storage, crypt *crypto.Crypto) http.HandlerFunc {
 		hash := parts[2]
 		if hash == "" {
 			http.NotFound(w, r)
+			return
+		}
+
+		if val, ct, ok := c.Get(hash); ok {
+			w.Header().Set("Content-Type", ct)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(val))
 			return
 		}
 
@@ -58,9 +61,10 @@ func GetKV(store *storage.Storage, crypt *crypto.Crypto) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(getResponse{
-			Text: string(plaintext),
-		})
+		c.Set(entry.Hash, string(plaintext), entry.ContentType, entry.ExpiresAtPtr())
+
+		w.Header().Set("Content-Type", entry.ContentType)
+		w.WriteHeader(http.StatusOK)
+		w.Write(plaintext)
 	}
 }

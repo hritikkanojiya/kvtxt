@@ -54,7 +54,7 @@ func main() {
 
 	mux.Handle("/v1/kv", api.CreateKV(store, crypt, c))
 
-	mux.Handle("/v1/kv/", api.GetKV(store, crypt))
+	mux.Handle("/v1/kv/", api.GetKV(store, crypt, c))
 
 	log.Printf("kvtxt starting on %s\n", cfg.Addr)
 

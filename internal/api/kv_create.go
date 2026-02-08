@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+	"unicode/utf8"
 
 	"github.com/hritikkanojiya/kvtxt/internal/cache"
 	"github.com/hritikkanojiya/kvtxt/internal/crypto"
@@ -13,8 +14,9 @@ import (
 )
 
 type createRequest struct {
-	Text       string `json:"text"`
-	TTLSeconds *int64 `json:"ttl_seconds"`
+	Text        json.RawMessage `json:"text"`
+	ContentType string          `json:"content_type"`
+	TTLSeconds  *int64          `json:"ttl_seconds"`
 }
 
 type createResponse struct {
@@ -27,7 +29,7 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-
+		
 		defer r.Body.Close()
 
 		var req createRequest
@@ -36,9 +38,27 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			return
 		}
 
-		if req.Text == "" {
+		if len(req.Text) == 0 {
 			http.Error(w, "text is required", http.StatusBadRequest)
 			return
+		}
+
+		if req.ContentType == "" {
+			req.ContentType = "text/plain; charset=utf-8"
+		}
+
+		switch {
+		case req.ContentType == "application/json":
+			if !json.Valid(req.Text) {
+				http.Error(w, "invalid json payload", http.StatusBadRequest)
+				return
+			}
+
+		case len(req.ContentType) >= 5 && req.ContentType[:5] == "text/":
+			if !utf8.Valid(req.Text) {
+				http.Error(w, "invalid utf-8 text", http.StatusBadRequest)
+				return
+			}
 		}
 
 		if req.TTLSeconds != nil && *req.TTLSeconds <= 0 {
@@ -75,10 +95,11 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			}
 
 			entry = &storage.Entry{
-				Hash:      hash,
-				Payload:   encrypted,
-				CreatedAt: now,
-				ExpiresAt: expires,
+				Hash:        hash,
+				Payload:     encrypted,
+				ContentType: req.ContentType,
+				CreatedAt:   now,
+				ExpiresAt:   expires,
 			}
 
 			err = store.Insert(entry)
@@ -101,7 +122,7 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			return
 		}
 
-		c.Set(entry.Hash, req.Text, entry.ExpiresAtPtr())
+		c.Set(entry.Hash, string(req.Text), entry.ContentType, entry.ExpiresAtPtr())
 
 		w.Header().Set("Content-Type", "application/json")
 

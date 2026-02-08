@@ -7,9 +7,10 @@ import (
 )
 
 type entry struct {
-	key       string
-	value     string
-	expiresAt *int64
+	key         string
+	value       string
+	contentType string
+	expiresAt   *int64
 }
 
 type Cache struct {
@@ -31,27 +32,27 @@ func New(maxSize int) *Cache {
 	}
 }
 
-func (c *Cache) Get(key string) (string, bool) {
+func (c *Cache) Get(key string) (value string, contentType string, ok bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	el, ok := c.items[key]
 	if !ok {
-		return "", false
+		return "", "", false
 	}
 
 	ent := el.Value.(*entry)
 
 	if ent.expiresAt != nil && *ent.expiresAt <= time.Now().Unix() {
 		c.removeElement(el)
-		return "", false
+		return "", "", false
 	}
 
 	c.ll.MoveToFront(el)
-	return ent.value, true
+	return ent.value, ent.contentType, true
 }
 
-func (c *Cache) Set(key, value string, expiresAt *int64) {
+func (c *Cache) Set(key, value string, contentType string, expiresAt *int64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -63,9 +64,10 @@ func (c *Cache) Set(key, value string, expiresAt *int64) {
 	}
 
 	el := c.ll.PushFront(&entry{
-		key:       key,
-		value:     value,
-		expiresAt: expiresAt,
+		key:         key,
+		value:       value,
+		contentType: contentType,
+		expiresAt:   expiresAt,
 	})
 	c.items[key] = el
 

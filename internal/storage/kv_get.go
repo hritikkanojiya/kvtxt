@@ -6,7 +6,7 @@ import (
 
 func (s *Storage) Get(hash string) (*Entry, error) {
 	const q = `
-	SELECT hash, payload, created_at, expires_at
+	SELECT hash, payload, content_type, created_at, expires_at
 	FROM kv
 	WHERE hash = ?
 	`
@@ -15,6 +15,7 @@ func (s *Storage) Get(hash string) (*Entry, error) {
 	err := s.db.QueryRow(q, hash).Scan(
 		&e.Hash,
 		&e.Payload,
+		&e.ContentType,
 		&e.CreatedAt,
 		&e.ExpiresAt,
 	)
