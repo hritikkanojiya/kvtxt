@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -35,6 +36,7 @@ func GetKV(store *storage.Storage, crypt *crypto.Crypto) http.HandlerFunc {
 
 		entry, err := store.Get(hash)
 		if err != nil {
+			slog.Error("storage error", "error", err)
 			http.Error(w, "storage error", http.StatusInternalServerError)
 			return
 		}
@@ -51,6 +53,7 @@ func GetKV(store *storage.Storage, crypt *crypto.Crypto) http.HandlerFunc {
 
 		plaintext, err := crypt.Decrypt(entry.Payload)
 		if err != nil {
+			slog.Error("decryption failed", "error", err)
 			http.Error(w, "decryption failed", http.StatusInternalServerError)
 			return
 		}

@@ -1,32 +1,43 @@
 package main
 
 import (
+	"log"
+
 	"github.com/hritikkanojiya/kvtxt/internal/api"
 	"github.com/hritikkanojiya/kvtxt/internal/cache"
 	"github.com/hritikkanojiya/kvtxt/internal/config"
 	"github.com/hritikkanojiya/kvtxt/internal/crypto"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
 
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
+
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("configuration error: %v", err)
+		slog.Error("configuration error", "error", err)
+		os.Exit(1)
 	}
 
 	crypt, err := crypto.New(cfg.EncryptionKey)
 	if err != nil {
-		log.Fatalf("crypto init error: %v", err)
+		slog.Error("crypto init error", "error", err)
+		os.Exit(1)
 	}
 
 	c := cache.New(1000)
 
 	store, err := storage.Open(cfg.DBPath)
 	if err != nil {
-		log.Fatalf("storage init error: %v", err)
+		slog.Error("storage init failed", "error", err)
+		os.Exit(1)
 	}
 	defer store.Close()
 
@@ -43,7 +54,7 @@ func main() {
 
 	log.Printf("kvtxt starting on %s\n", cfg.Addr)
 
-	if err := http.ListenAndServe(cfg.Addr, mux); err != nil {
-		log.Fatal(err)
+	if err := http.ListenAndServe(cfg.Addr, api.Logging(mux)); err != nil {
+		slog.Error("server stopped", "error", err)
 	}
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -40,12 +41,14 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 
 		encrypted, err := crypt.Encrypt([]byte(req.Text))
 		if err != nil {
+			slog.Error("encryption failed", "error", err)
 			http.Error(w, "encryption failed", http.StatusInternalServerError)
 			return
 		}
 
 		hash, err := storage.GenerateHash()
 		if err != nil {
+			slog.Error("hash generation failed", "error", err)
 			http.Error(w, "hash generation failed", http.StatusInternalServerError)
 			return
 		}
@@ -68,6 +71,7 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 		}
 
 		if err := store.Insert(entry); err != nil {
+			slog.Error("insert failed", "error", err)
 			http.Error(w, "storage error", http.StatusInternalServerError)
 			return
 		}
