@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/hritikkanojiya/kvtxt/internal/api"
 	"github.com/hritikkanojiya/kvtxt/internal/cache"
 	"github.com/hritikkanojiya/kvtxt/internal/config"
+	"github.com/hritikkanojiya/kvtxt/internal/constant"
 	"github.com/hritikkanojiya/kvtxt/internal/crypto"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
 
@@ -13,7 +16,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 func main() {
@@ -34,9 +36,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	c := cache.New(1000)
+	c := cache.New(constant.DefaultCacheSize)
 
-	store, err := storage.Open(cfg.DBPath)
+	store, err := storage.Open(cfg.DatabaseFilePath)
 	if err != nil {
 		slog.Error("storage init failed", "error", err)
 		os.Exit(1)
@@ -54,20 +56,26 @@ func main() {
 
 	mux.Handle("/v1/kv/", api.GetKV(store, crypt, c))
 
-	const maxPayloadSize = 50 << 20
+	maxSizeMB := cfg.MaxPayloadSize
+	if maxSizeMB <= 0 {
+		slog.Warn("invalid max payload size, using default", "value", cfg.MaxPayloadSize)
+		maxSizeMB = constant.DefaultMaxPayloadSizeMB
+	}
+
+	maxPayloadSize := int64(maxSizeMB) * constant.MB
 
 	var handler http.Handler = mux
 	handler = api.MaxBodySize(maxPayloadSize)(handler)
 	handler = api.Logging(handler)
 
 	srv := &http.Server{
-		Addr:    cfg.Addr,
+		Addr:    cfg.AppPort,
 		Handler: handler,
 	}
 
 	go func() {
-		slog.Info("server listening", "addr", cfg.Addr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		slog.Info("server listening", "addr", cfg.AppPort)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server error", "error", err)
 			os.Exit(1)
 		}
@@ -79,7 +87,7 @@ func main() {
 	<-stop
 	slog.Info("shutdown signal received")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), constant.ShutdownTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
