@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"github.com/hritikkanojiya/kvtxt/internal/api"
 	"github.com/hritikkanojiya/kvtxt/internal/cache"
 	"github.com/hritikkanojiya/kvtxt/internal/config"
@@ -56,11 +54,15 @@ func main() {
 
 	mux.Handle("/v1/kv/", api.GetKV(store, crypt, c))
 
-	log.Printf("kvtxt starting on %s\n", cfg.Addr)
+	const maxPayloadSize = 50 << 20
+
+	var handler http.Handler = mux
+	handler = api.MaxBodySize(maxPayloadSize)(handler)
+	handler = api.Logging(handler)
 
 	srv := &http.Server{
 		Addr:    cfg.Addr,
-		Handler: api.Logging(mux),
+		Handler: handler,
 	}
 
 	go func() {

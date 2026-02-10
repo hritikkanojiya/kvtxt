@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -29,11 +30,18 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		
+
 		defer r.Body.Close()
 
 		var req createRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		dec := json.NewDecoder(r.Body)
+		if err := dec.Decode(&req); err != nil {
+			var maxErr *http.MaxBytesError
+			if errors.As(err, &maxErr) {
+				http.Error(w, "payload too large", http.StatusRequestEntityTooLarge)
+				return
+			}
+
 			http.Error(w, "invalid json body", http.StatusBadRequest)
 			return
 		}
