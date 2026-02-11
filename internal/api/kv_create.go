@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -24,31 +25,44 @@ type createResponse struct {
 	Key string `json:"key"`
 }
 
-func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) *APIError {
 		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
+			return &APIError{
+				Status:  http.StatusMethodNotAllowed,
+				Code:    ErrBadRequest,
+				Message: "Invalid Method",
+			}
 		}
 
 		defer r.Body.Close()
-
+		
 		var req createRequest
-		dec := json.NewDecoder(r.Body)
-		if err := dec.Decode(&req); err != nil {
-			var maxErr *http.MaxBytesError
-			if errors.As(err, &maxErr) {
-				http.Error(w, "payload too large", http.StatusRequestEntityTooLarge)
-				return
+
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			if errors.Is(err, http.ErrBodyReadAfterClose) ||
+				strings.Contains(err.Error(), "request body too large") {
+				return &APIError{
+					Status:  http.StatusRequestEntityTooLarge,
+					Code:    ErrPayloadTooLarge,
+					Message: "Request body exceeds allowed size",
+				}
 			}
 
-			http.Error(w, "invalid json body", http.StatusBadRequest)
-			return
+			return &APIError{
+				Status:  http.StatusBadRequest,
+				Code:    ErrInvalidJSON,
+				Message: "Invalid JSON body",
+			}
 		}
 
 		if len(req.Text) == 0 {
-			http.Error(w, "text is required", http.StatusBadRequest)
-			return
+			return &APIError{
+				Status:  http.StatusBadRequest,
+				Code:    ErrInvalidJSON,
+				Message: "Text is required",
+			}
 		}
 
 		if req.ContentType == "" {
@@ -58,27 +72,39 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 		switch {
 		case req.ContentType == "application/json":
 			if !json.Valid(req.Text) {
-				http.Error(w, "invalid json payload", http.StatusBadRequest)
-				return
+				return &APIError{
+					Status:  http.StatusBadRequest,
+					Code:    ErrInvalidJSON,
+					Message: "Invalid JSON body",
+				}
 			}
 
 		case len(req.ContentType) >= 5 && req.ContentType[:5] == "text/":
 			if !utf8.Valid(req.Text) {
-				http.Error(w, "invalid utf-8 text", http.StatusBadRequest)
-				return
+				return &APIError{
+					Status:  http.StatusBadRequest,
+					Code:    ErrBadRequest,
+					Message: "Invalid utf-8 text",
+				}
 			}
 		}
 
 		if req.TTLSeconds != nil && *req.TTLSeconds <= 0 {
-			http.Error(w, "ttl_seconds must be greater than zero", http.StatusBadRequest)
-			return
+			return &APIError{
+				Status:  http.StatusBadRequest,
+				Code:    ErrBadRequest,
+				Message: "TTL must be greater than zero",
+			}
 		}
 
 		encrypted, err := crypt.Encrypt([]byte(req.Text))
 		if err != nil {
 			slog.Error("encryption failed", "error", err)
-			http.Error(w, "encryption failed", http.StatusInternalServerError)
-			return
+			return &APIError{
+				Status:  http.StatusInternalServerError,
+				Code:    ErrInternal,
+				Message: "Encryption failed",
+			}
 		}
 
 		now := time.Now().Unix()
@@ -98,8 +124,11 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			hash, err := storage.GenerateHash()
 			if err != nil {
 				slog.Error("hash generation failed", "error", err)
-				http.Error(w, "hash generation failed", http.StatusInternalServerError)
-				return
+				return &APIError{
+					Status:  http.StatusInternalServerError,
+					Code:    ErrInternal,
+					Message: "Hash generation failed",
+				}
 			}
 
 			entry = &storage.Entry{
@@ -120,14 +149,20 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 			}
 
 			slog.Error("insert failed", "error", err)
-			http.Error(w, "storage error", http.StatusInternalServerError)
-			return
+			return &APIError{
+				Status:  http.StatusInternalServerError,
+				Code:    ErrInternal,
+				Message: "Storage Error",
+			}
 		}
 
 		if entry == nil {
 			slog.Error("hash collision retries exhausted")
-			http.Error(w, "could not generate unique key", http.StatusInternalServerError)
-			return
+			return &APIError{
+				Status:  http.StatusInternalServerError,
+				Code:    ErrInternal,
+				Message: "Could not generate unique key",
+			}
 		}
 
 		c.Set(entry.Hash, string(req.Text), entry.ContentType, entry.ExpiresAtPtr())
@@ -138,5 +173,7 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http
 		json.NewEncoder(w).Encode(createResponse{
 			Key: entry.Hash,
 		})
+
+		return nil
 	}
 }

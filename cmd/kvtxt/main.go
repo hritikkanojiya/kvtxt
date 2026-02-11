@@ -52,9 +52,23 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	mux.Handle("/v1/kv", api.CreateKV(store, crypt, c))
+	mux.Handle(
+		"/v1/kv",
+		api.Adapt(
+			api.AllowMethods(http.MethodPost)(
+				api.CreateKV(store, crypt, c),
+			),
+		),
+	)
 
-	mux.Handle("/v1/kv/", api.GetKV(store, crypt, c))
+	mux.Handle(
+		"/v1/kv/",
+		api.Adapt(
+			api.AllowMethods(http.MethodGet)(
+				api.GetKV(store, crypt, c),
+			),
+		),
+	)
 
 	maxSizeMB := cfg.MaxPayloadSize
 	if maxSizeMB <= 0 {
@@ -69,8 +83,11 @@ func main() {
 	handler = api.Logging(handler)
 
 	srv := &http.Server{
-		Addr:    cfg.AppPort,
-		Handler: handler,
+		Addr:         cfg.AppPort,
+		Handler:      handler,
+		ReadTimeout:  constant.ReadTimeout,
+		WriteTimeout: constant.WriteTimeout,
+		IdleTimeout:  constant.IdleTimeout,
 	}
 
 	go func() {

@@ -11,54 +11,75 @@ import (
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
 )
 
-func GetKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func GetKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) *APIError {
 		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
+			return &APIError{
+				Status:  http.StatusMethodNotAllowed,
+				Code:    ErrBadRequest,
+				Message: "Invalid Method",
+			}
 		}
 
 		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 		if len(parts) != 3 {
-			http.NotFound(w, r)
-			return
+			return &APIError{
+				Status:  http.StatusNotFound,
+				Code:    ErrNotFound,
+				Message: "Not found",
+			}
 		}
 
 		hash := parts[2]
 		if hash == "" {
-			http.NotFound(w, r)
-			return
+			return &APIError{
+				Status:  http.StatusNotFound,
+				Code:    ErrNotFound,
+				Message: "Not found",
+			}
 		}
 
 		if val, ct, ok := c.Get(hash); ok {
 			w.Header().Set("Content-Type", ct)
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(val))
-			return
+			return nil
 		}
 
 		entry, err := store.Get(hash)
 		if err != nil {
 			slog.Error("storage error", "error", err)
-			http.Error(w, "storage error", http.StatusInternalServerError)
-			return
+			return &APIError{
+				Status:  http.StatusInternalServerError,
+				Code:    ErrInternal,
+				Message: "Storage error",
+			}
 		}
 		if entry == nil {
-			http.NotFound(w, r)
-			return
+			return &APIError{
+				Status:  http.StatusNotFound,
+				Code:    ErrNotFound,
+				Message: "Not found",
+			}
 		}
 
 		now := time.Now().Unix()
 		if entry.ExpiresAt.Valid && entry.ExpiresAt.Int64 <= now {
-			w.WriteHeader(http.StatusGone)
-			return
+			return &APIError{
+				Status:  http.StatusGone,
+				Code:    ErrConflict,
+				Message: "Key expired",
+			}
 		}
 
 		plaintext, err := crypt.Decrypt(entry.Payload)
 		if err != nil {
 			slog.Error("decryption failed", "error", err)
-			http.Error(w, "decryption failed", http.StatusInternalServerError)
-			return
+			return &APIError{
+				Status:  http.StatusInternalServerError,
+				Code:    ErrInternal,
+				Message: "Decryption failed",
+			}
 		}
 
 		c.Set(entry.Hash, string(plaintext), entry.ContentType, entry.ExpiresAtPtr())
@@ -66,5 +87,8 @@ func GetKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) http.Ha
 		w.Header().Set("Content-Type", entry.ContentType)
 		w.WriteHeader(http.StatusOK)
 		w.Write(plaintext)
+
+		return nil
 	}
+
 }

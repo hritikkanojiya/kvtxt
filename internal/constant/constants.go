@@ -10,5 +10,8 @@ const (
 	DefaultCacheSize        = 1000
 	MB                      = int64(1 << 20)
 	ShutdownTimeout         = 10 * time.Second
+	ReadTimeout             = 10 * time.Second
+	WriteTimeout            = 10 * time.Second
+	IdleTimeout             = 30 * time.Second
 	MinEncryptionKeyLength  = 16
 )
