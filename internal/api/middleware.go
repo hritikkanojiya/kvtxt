@@ -1,10 +1,14 @@
 package api
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/hritikkanojiya/kvtxt/internal/constant"
 )
 
 func Logging(next http.Handler) http.Handler {
@@ -13,7 +17,10 @@ func Logging(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 
+		reqID := GetRequestID(r.Context())
+
 		slog.Info("request",
+			"request_id", reqID,
 			"method", r.Method,
 			"path", r.URL.Path,
 			"duration_ms", time.Since(start).Milliseconds(),
@@ -57,4 +64,26 @@ func AllowMethods(methods ...string) func(HandlerFunc) HandlerFunc {
 			return next(w, r)
 		}
 	}
+}
+
+func RequestID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		reqID := r.Header.Get("X-Request-ID")
+		if reqID == "" {
+			reqID = uuid.NewString()
+		}
+
+		w.Header().Set("X-Request-ID", reqID)
+
+		ctx := context.WithValue(r.Context(), constant.RequestIdKey, reqID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func GetRequestID(ctx context.Context) string {
+	if v, ok := ctx.Value(constant.RequestIdKey).(string); ok {
+		return v
+	}
+	return ""
 }

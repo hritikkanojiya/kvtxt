@@ -81,6 +81,7 @@ func main() {
 	var handler http.Handler = mux
 	handler = api.MaxBodySize(maxPayloadSize)(handler)
 	handler = api.Logging(handler)
+	handler = api.RequestID(handler)
 
 	srv := &http.Server{
 		Addr:         cfg.AppPort,

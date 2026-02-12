@@ -18,10 +18,16 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-func WriteError(w http.ResponseWriter, err *APIError) {
+func WriteError(w http.ResponseWriter, r *http.Request, err *APIError) {
+	reqID := GetRequestID(r.Context())
+
 	resp := errorResponse{}
 	resp.Error.Code = err.Code
 	resp.Error.Message = err.Message
+
+	if reqID != "" {
+		w.Header().Set("X-Request-ID", reqID)
+	}
 
 	WriteJSON(w, err.Status, resp)
 }

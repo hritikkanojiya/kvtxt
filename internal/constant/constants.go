@@ -14,4 +14,5 @@ const (
 	WriteTimeout            = 10 * time.Second
 	IdleTimeout             = 30 * time.Second
 	MinEncryptionKeyLength  = 16
+	RequestIdKey            = "request_id"
 )

@@ -9,7 +9,7 @@ func Adapt(h HandlerFunc) http.HandlerFunc {
 
 		defer func() {
 			if rec := recover(); rec != nil {
-				WriteError(w, &APIError{
+				WriteError(w, r, &APIError{
 					Status:  http.StatusInternalServerError,
 					Code:    ErrInternal,
 					Message: "Internal server error",
@@ -18,7 +18,7 @@ func Adapt(h HandlerFunc) http.HandlerFunc {
 		}()
 
 		if err := h(w, r); err != nil {
-			WriteError(w, err)
+			WriteError(w, r, err)
 		}
 	}
 }
