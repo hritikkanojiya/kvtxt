@@ -37,6 +37,10 @@ func (s *Storage) Close() error {
 	return s.db.Close()
 }
 
+func (s *Storage) Ping() error {
+	return s.db.Ping()
+}
+
 func IsUniqueConstraintError(err error) bool {
 	if err == nil {
 		return false

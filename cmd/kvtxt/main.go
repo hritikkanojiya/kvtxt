@@ -47,10 +47,19 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
-	})
+	api.RegisterRoute(
+		mux,
+		"/health",
+		http.MethodGet,
+		api.Health(),
+	)
+
+	api.RegisterRoute(
+		mux,
+		"/ready",
+		http.MethodGet,
+		api.Readiness(store),
+	)
 
 	mux.Handle(
 		"/v1/kv",
