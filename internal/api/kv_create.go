@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/hritikkanojiya/kvtxt/internal/cache"
+	"github.com/hritikkanojiya/kvtxt/internal/constant"
 	"github.com/hritikkanojiya/kvtxt/internal/crypto"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
 )
@@ -22,7 +23,8 @@ type createRequest struct {
 }
 
 type createResponse struct {
-	Key string `json:"key"`
+	Key       string `json:"key"`
+	ExpiresAt *int64 `json:"expires_at,omitempty"`
 }
 
 func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) HandlerFunc {
@@ -36,7 +38,7 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) Hand
 		}
 
 		defer r.Body.Close()
-		
+
 		var req createRequest
 
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -89,11 +91,27 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) Hand
 			}
 		}
 
-		if req.TTLSeconds != nil && *req.TTLSeconds <= 0 {
+		var ttl int64
+
+		if req.TTLSeconds != nil {
+			ttl = *req.TTLSeconds
+		} else {
+			ttl = constant.DefaultTTLSeconds
+		}
+
+		if ttl < constant.MinTTLSeconds {
 			return &APIError{
 				Status:  http.StatusBadRequest,
 				Code:    ErrBadRequest,
 				Message: "TTL must be greater than zero",
+			}
+		}
+
+		if ttl > constant.MaxTTLSeconds {
+			return &APIError{
+				Status:  http.StatusBadRequest,
+				Code:    ErrBadRequest,
+				Message: "TTL exceeds maximum allowed",
 			}
 		}
 
@@ -110,11 +128,11 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) Hand
 		now := time.Now().Unix()
 
 		var expires sql.NullInt64
-		if req.TTLSeconds != nil {
-			expires = sql.NullInt64{
-				Int64: now + *req.TTLSeconds,
-				Valid: true,
-			}
+		expiryTime := time.Now().Add(time.Duration(ttl) * time.Second)
+
+		expires = sql.NullInt64{
+			Int64: expiryTime.Unix(),
+			Valid: true,
 		}
 
 		var entry *storage.Entry
@@ -170,8 +188,10 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) Hand
 		w.Header().Set("Content-Type", "application/json")
 
 		w.WriteHeader(http.StatusCreated)
+
 		json.NewEncoder(w).Encode(createResponse{
-			Key: entry.Hash,
+			Key:       entry.Hash,
+			ExpiresAt: entry.ExpiresAtPtr(),
 		})
 
 		return nil
