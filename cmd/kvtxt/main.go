@@ -9,6 +9,7 @@ import (
 	"github.com/hritikkanojiya/kvtxt/internal/constant"
 	"github.com/hritikkanojiya/kvtxt/internal/crypto"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
+	"github.com/hritikkanojiya/kvtxt/internal/worker"
 
 	"context"
 	"log/slog"
@@ -44,6 +45,15 @@ func main() {
 		os.Exit(1)
 	}
 	defer store.Close()
+
+	ctx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+
+	worker.StartCleanupWorker(
+		ctx,
+		store,
+		constant.CleanupInterval,
+	)
 
 	mux := http.NewServeMux()
 
@@ -114,12 +124,20 @@ func main() {
 	<-stop
 	slog.Info("shutdown signal received")
 
-	ctx, cancel := context.WithTimeout(context.Background(), constant.ShutdownTimeout)
-	defer cancel()
+	appCancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	shutdownCtx, shutdownCancel := context.WithTimeout(
+		context.Background(),
+		constant.ShutdownTimeout,
+	)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("graceful shutdown failed", "error", err)
 	} else {
 		slog.Info("server stopped gracefully")
 	}
+
+	signal.Stop(stop)
+	close(stop)
 }

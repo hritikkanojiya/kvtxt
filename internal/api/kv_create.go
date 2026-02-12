@@ -96,10 +96,12 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) Hand
 		if req.TTLSeconds != nil {
 			ttl = *req.TTLSeconds
 		} else {
-			ttl = constant.DefaultTTLSeconds
+			ttl = int64(constant.DefaultTTL)
 		}
 
-		if ttl < constant.MinTTLSeconds {
+		ttlDuration := time.Duration(ttl) * time.Second
+
+		if ttlDuration < constant.MinTTL {
 			return &APIError{
 				Status:  http.StatusBadRequest,
 				Code:    ErrBadRequest,
@@ -107,7 +109,7 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) Hand
 			}
 		}
 
-		if ttl > constant.MaxTTLSeconds {
+		if ttlDuration > constant.MaxTTL {
 			return &APIError{
 				Status:  http.StatusBadRequest,
 				Code:    ErrBadRequest,
@@ -128,7 +130,7 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) Hand
 		now := time.Now().Unix()
 
 		var expires sql.NullInt64
-		expiryTime := time.Now().Add(time.Duration(ttl) * time.Second)
+		expiryTime := time.Now().Add(ttlDuration)
 
 		expires = sql.NullInt64{
 			Int64: expiryTime.Unix(),

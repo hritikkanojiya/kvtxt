@@ -47,3 +47,17 @@ func IsUniqueConstraintError(err error) bool {
 	}
 	return strings.Contains(err.Error(), "UNIQUE constraint failed")
 }
+
+func (s *Storage) DeleteExpired(now int64) (int64, error) {
+	result, err := s.db.Exec(`
+		DELETE FROM entries
+		WHERE expires_at IS NOT NULL
+		AND expires_at <= ?
+	`, now)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected()
+}

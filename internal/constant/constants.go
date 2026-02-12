@@ -15,7 +15,8 @@ const (
 	IdleTimeout             = 30 * time.Second
 	MinEncryptionKeyLength  = 16
 	RequestIdKey            = "request_id"
-	MaxTTLSeconds           = 365 * 24 * 60 * 60
-	MinTTLSeconds           = 1
-	DefaultTTLSeconds       = 60 * 24 * 60 * 60
+	MaxTTL                  = 31536000 * time.Second
+	MinTTL                  = 1 * time.Second
+	DefaultTTL              = 5184000 * time.Second
+	CleanupInterval         = 1800 * time.Second
 )
