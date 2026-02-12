@@ -9,7 +9,5 @@ const (
 	ErrMethodNotAllowed ErrorCode = "BAD_REQUEST"
 	ErrNotFound         ErrorCode = "NOT_FOUND"
 	ErrConflict         ErrorCode = "CONFLICT"
-	ErrUnauthorized     ErrorCode = "UNAUTHORIZED"
-	ErrForbidden        ErrorCode = "FORBIDDEN"
 	ErrInternal         ErrorCode = "INTERNAL_ERROR"
 )

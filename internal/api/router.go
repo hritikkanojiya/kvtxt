@@ -10,8 +10,8 @@ func RegisterRoute(
 	method string,
 	h HandlerFunc,
 ) {
-	handler := Adapt(
-		AllowMethods(method)(h),
+	handler := Adapter(
+		AllowHttpMethods(method)(h),
 	)
 
 	mux.Handle(path, handler)

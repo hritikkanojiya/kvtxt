@@ -10,7 +10,7 @@ import (
 
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) *APIError
 
-func Adapt(h HandlerFunc) http.HandlerFunc {
+func Adapter(h HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		defer func() {

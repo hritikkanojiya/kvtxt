@@ -3,21 +3,22 @@ package storage
 import (
 	"crypto/rand"
 	"math/big"
+
+	"github.com/hritikkanojiya/kvtxt/internal/constant"
 )
 
-const base62Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 const keyLength = 16
 
 func GenerateHash() (string, error) {
 	result := make([]byte, keyLength)
-	max := big.NewInt(int64(len(base62Chars)))
+	maxValue := big.NewInt(int64(len(constant.Base62Characters)))
 
 	for i := 0; i < keyLength; i++ {
-		n, err := rand.Int(rand.Reader, max)
+		n, err := rand.Int(rand.Reader, maxValue)
 		if err != nil {
 			return "", err
 		}
-		result[i] = base62Chars[n.Int64()]
+		result[i] = constant.Base62Characters[n.Int64()]
 	}
 
 	return string(result), nil

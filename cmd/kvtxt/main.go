@@ -59,22 +59,22 @@ func main() {
 
 	api.RegisterRoute(
 		mux,
-		"/health",
+		"/liveness",
 		http.MethodGet,
-		api.Health(),
+		api.Liveness(),
 	)
 
 	api.RegisterRoute(
 		mux,
-		"/ready",
+		"/readiness",
 		http.MethodGet,
 		api.Readiness(store),
 	)
 
 	mux.Handle(
 		"/v1/kv",
-		api.Adapt(
-			api.AllowMethods(http.MethodPost)(
+		api.Adapter(
+			api.AllowHttpMethods(http.MethodPost)(
 				api.CreateKV(store, crypt, c),
 			),
 		),
@@ -82,8 +82,8 @@ func main() {
 
 	mux.Handle(
 		"/v1/kv/",
-		api.Adapt(
-			api.AllowMethods(http.MethodGet)(
+		api.Adapter(
+			api.AllowHttpMethods(http.MethodGet)(
 				api.GetKV(store, crypt, c),
 			),
 		),
@@ -98,7 +98,7 @@ func main() {
 	maxPayloadSize := int64(maxSizeMB) * constant.MB
 
 	var handler http.Handler = mux
-	handler = api.MaxBodySize(maxPayloadSize)(handler)
+	handler = api.MaxPayloadSize(maxPayloadSize)(handler)
 	handler = api.Logging(handler)
 	handler = api.RequestID(handler)
 

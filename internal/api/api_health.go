@@ -3,8 +3,19 @@ package api
 import (
 	"net/http"
 
+	"github.com/hritikkanojiya/kvtxt/internal/constant"
 	"github.com/hritikkanojiya/kvtxt/internal/storage"
 )
+
+func Liveness() HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) *APIError {
+		WriteJSON(w, http.StatusOK, map[string]string{
+			"status":  "ok",
+			"version": constant.AppVersion,
+		})
+		return nil
+	}
+}
 
 func Readiness(store *storage.Storage) HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) *APIError {
@@ -18,7 +29,8 @@ func Readiness(store *storage.Storage) HandlerFunc {
 		}
 
 		WriteJSON(w, http.StatusOK, map[string]string{
-			"status": "ok",
+			"status":  "ok",
+			"version": constant.AppVersion,
 		})
 
 		return nil
