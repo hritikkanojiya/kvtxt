@@ -1,3 +1,14 @@
+// Package main is the entry point of the kvtxt application.
+// It wires together configuration, storage, crypto layer,
+// middleware stack, and HTTP router, then starts the server.
+//
+// High-level flow:
+// 1. Load configuration
+// 2. Initialize storage and crypto
+// 3. Register routes
+// 4. Wrap with middlewares
+// 5. Start HTTP server
+
 package main
 
 import (
@@ -19,6 +30,9 @@ import (
 	"syscall"
 )
 
+// main initializes application dependencies and starts the HTTP server.
+// The function is intentionally kept orchestration-only.
+// Business logic must never be placed here.
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,

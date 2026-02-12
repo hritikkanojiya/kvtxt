@@ -1,3 +1,6 @@
+// HashKey generates a deterministic hash for storage keys.
+// This prevents raw keys from being stored directly.
+
 package storage
 
 import (

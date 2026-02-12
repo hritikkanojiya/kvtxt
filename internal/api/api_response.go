@@ -1,3 +1,6 @@
+// APIResponse defines the standard success response format.
+// All successful responses must use this structure to maintain API consistency.
+
 package api
 
 import (

@@ -1,3 +1,8 @@
+// Package crypto provides encryption and decryption utilities
+// used to protect stored values.
+//
+// All encryption details must remain encapsulated in this package.
+
 package crypto
 
 import (
@@ -36,6 +41,7 @@ func New(keyB64 string) (*Crypto, error) {
 	return &Crypto{aead: aead}, nil
 }
 
+// Encrypt secures plaintext value before persistence.
 func (c *Crypto) Encrypt(plaintext []byte) ([]byte, error) {
 	nonce := make([]byte, c.aead.NonceSize())
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
@@ -48,6 +54,7 @@ func (c *Crypto) Encrypt(plaintext []byte) ([]byte, error) {
 	return append(nonce, ciphertext...), nil
 }
 
+// Decrypt restores original value before returning to client.
 func (c *Crypto) Decrypt(data []byte) ([]byte, error) {
 	nonceSize := c.aead.NonceSize()
 	if len(data) < nonceSize {

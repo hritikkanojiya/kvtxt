@@ -1,3 +1,6 @@
+// Package cache provides in-memory caching layer.
+// It improves read performance and reduces database load.
+
 package cache
 
 import (

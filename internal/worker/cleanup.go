@@ -1,3 +1,6 @@
+// CleanupWorker periodically removes expired key-value entries
+// from storage to prevent unbounded growth.
+
 package worker
 
 import (
@@ -14,6 +17,7 @@ func StartCleanupWorker(
 	interval time.Duration,
 ) {
 
+	// Run cleanup at fixed interval
 	ticker := time.NewTicker(interval)
 
 	go func() {

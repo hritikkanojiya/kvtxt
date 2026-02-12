@@ -1,3 +1,10 @@
+// GetKV retrieves a stored value by key.
+// Flow:
+// 1. Validate key
+// 2. Fetch from storage
+// 3. Decrypt (if required)
+// 4. Return response
+
 package api
 
 import (

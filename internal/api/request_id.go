@@ -1,3 +1,6 @@
+// RequestID middleware injects a unique request ID into context.
+// This enables traceability across logs and downstream calls.
+
 package api
 
 import (

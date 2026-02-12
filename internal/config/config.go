@@ -1,3 +1,6 @@
+// Package config loads and validates application configuration
+// from environment variables or config files.
+
 package config
 
 import (

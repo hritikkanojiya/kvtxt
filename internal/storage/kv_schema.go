@@ -1,3 +1,5 @@
+// KVSchema defines the database schema model for a key-value entry.
+
 package storage
 
 import "database/sql"

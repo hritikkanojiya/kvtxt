@@ -1,3 +1,6 @@
+// Create inserts a new key-value record into storage.
+// It assumes validation has already been performed by API layer.
+
 package storage
 
 import (

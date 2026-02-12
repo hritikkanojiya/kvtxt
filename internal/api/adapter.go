@@ -1,3 +1,6 @@
+// Adapter converts domain-level handlers into http.Handler.
+// This allows business logic to remain framework-agnostic.
+
 package api
 
 import (
@@ -10,6 +13,8 @@ import (
 
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) *APIError
 
+// Adapter wraps a domain handler and converts returned APIError
+// into a standardized HTTP response.
 func Adapter(h HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 

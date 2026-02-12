@@ -1,3 +1,11 @@
+// Package storage implements persistent layer for kvtxt.
+// It abstracts database operations behind a simple interface.
+//
+// Design principles:
+// - No HTTP logic here
+// - No crypto logic here
+// - Pure persistence responsibility
+
 package storage
 
 import (
@@ -8,6 +16,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// Storage represents database connection and configuration.
 type Storage struct {
 	db *sql.DB
 }

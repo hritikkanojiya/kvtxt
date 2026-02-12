@@ -1,3 +1,8 @@
+// Logging is a middleware that logs incoming HTTP requests
+// along with request ID and execution time.
+//
+// This middleware must wrap as early as possible in the chain.
+
 package api
 
 import (
@@ -8,6 +13,7 @@ import (
 
 func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Capture start time for latency calculation
 		start := time.Now()
 
 		next.ServeHTTP(w, r)

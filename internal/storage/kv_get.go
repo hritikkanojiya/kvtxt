@@ -1,3 +1,5 @@
+// Get retrieves a key-value record from storage by hashed key.
+
 package storage
 
 import (

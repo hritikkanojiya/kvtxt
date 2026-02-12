@@ -1,3 +1,10 @@
+// CreateKV handles key-value creation requests.
+// Responsibilities:
+// - Validate request body
+// - Encrypt value (if required)
+// - Persist to storage
+// - Return standardized response
+
 package api
 
 import (
@@ -29,6 +36,7 @@ type createResponse struct {
 
 func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) *APIError {
+		// Decode and validate request payload
 		if r.Method != http.MethodPost {
 			return &APIError{
 				Status:  http.StatusMethodNotAllowed,
@@ -117,6 +125,7 @@ func CreateKV(store *storage.Storage, crypt *crypto.Crypto, c *cache.Cache) Hand
 			}
 		}
 
+		// Delegate persistence to storage layer
 		encrypted, err := crypt.Encrypt([]byte(req.Text))
 		if err != nil {
 			slog.Error("encryption failed", "error", err)
