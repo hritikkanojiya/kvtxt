@@ -28,7 +28,7 @@ const (
 // Time-to-live configuration
 const (
 	MinTTL     = 1
-	DefaultTTL = 5184000 * time.Second
+	DefaultTTL = 5184000
 	MaxTTL     = 31536000 * time.Second
 )
 
