@@ -82,11 +82,11 @@ In-memory Cache
 
 ## Features
 
-* REST API (`POST` / `GET`)
+* REST API (`POST`/`GET`)
 * AES-256-GCM encryption at rest
 * SQLite single file database
-* WAL mode enabled
-* Optional TTL / expiration
+* WAL mode enabled 
+* TTL/expiration
 * TTL-aware LRU cache
 * Opaque URL-safe keys
 * Single static Go binary
