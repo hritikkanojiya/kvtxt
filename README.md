@@ -7,7 +7,7 @@
 <p align="center">
 
   <!-- Language -->
-  <img src="https://img.shields.io/badge/Language-Go%201.22+-00ADD8?logo=go" />
+  <img src="https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go" />
 
   <!-- HTTP -->
   <img src="https://img.shields.io/badge/HTTP-net%2Fhttp-informational" />
